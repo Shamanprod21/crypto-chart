@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Крипто-графики Binance (динамический список)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 10px; }
+    select { font-size: 16px; padding: 5px; margin-bottom: 10px; width: 300px; }
+    #tradingview_chart { height: 600px; }
+  </style>
+</head>
+<body>
+  <h2>Выберите криптовалюту (пары с USDT)</h2>
+  <select id="symbolSelect"></select>
+
+  <div id="tradingview_chart"></div>
+
+  <script src="https://s3.tradingview.com/tv.js"></script>
+  <script>
+    let widget = null;
+
+    // Создаём виджет TradingView
+    function createWidget(symbol) {
+      if (widget) {
+        widget.remove();
+      }
+      widget = new TradingView.widget({
+        width: "100%",
+        height: 600,
+        symbol: symbol,
+        interval: "60",
+        timezone: "Etc/UTC",
+        theme: "light",
+        style: "1",
+        locale: "ru",
+        toolbar_bg: "#f1f3f6",
+        enable_publishing: false,
+        hide_top_toolbar: false,
+        allow_symbol_change: true,
+        container_id: "tradingview_chart"
+      });
+    }
+
+    // Меняем символ графика при выборе
+    function changeSymbol(symbol) {
+      createWidget(symbol);
+    }
+
+    // Загружаем список пар с Binance API и заполняем select
+    async function loadSymbols() {
+      const select = document.getElementById('symbolSelect');
+      try {
+        const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+        const data = await response.json();
+        const symbols = data.symbols
+          .filter(s => s.quoteAsset === 'USDT' && s.status === 'TRADING')
+          .map(s => s.symbol)
+          .sort();
+
+        // Заполняем select
+        symbols.forEach(sym => {
+          const option = document.createElement('option');
+          option.value = 'BINANCE:' + sym;
+          option.textContent = sym.replace('USDT', '/USDT');
+          select.appendChild(option);
+        });
+
+        // Устанавливаем значение по умолчанию и создаём виджет
+        if (symbols.length > 0) {
+          select.value = 'BINANCE:' + symbols[0];
+          createWidget(select.value);
+        }
+      } catch (error) {
+        alert('Ошибка загрузки списка пар с Binance API');
+        console.error(error);
+      }
+    }
+
+    window.onload = () => {
+      loadSymbols();
+
+      // Событие изменения выбора
+      document.getElementById('symbolSelect').addEventListener('change', (e) => {
+        changeSymbol(e.target.value);
+      });
+    };
+  </script>
+</body>
+</html>
